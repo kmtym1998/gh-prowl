@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 
-	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/kmtym1998/gh-prowl/entity"
 )
 
@@ -91,12 +90,8 @@ func (c *APIClient) ListPullRequests(ctx context.Context, repoOwner, repoName st
 		"limit": validLimit,
 	}
 
-	client, err := api.DefaultGraphQLClient()
-	if err != nil {
-		return nil, err
-	}
 	response := listPullRequestsResult{}
-	if err := client.DoWithContext(ctx, query, variables, &response); err != nil {
+	if err := c.gql.DoWithContext(ctx, query, variables, &response); err != nil {
 		return nil, err
 	}
 
