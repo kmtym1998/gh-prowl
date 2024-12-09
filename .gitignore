@@ -1,2 +1,5 @@
 /gh-prowl
 /gh-prowl.exe
+.vscode
+.DS_Store
+tmp
