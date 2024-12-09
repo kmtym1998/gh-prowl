@@ -6,7 +6,6 @@ import (
 	"net/http"
 )
 
-// https://docs.github.com/ja/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
 type pullRequest struct {
 	Title string `json:"title"`
 	Head  struct {
@@ -14,6 +13,7 @@ type pullRequest struct {
 	} `json:"head"`
 }
 
+// https://docs.github.com/ja/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
 func (c *APIClient) GetPRLatestCommitSHA(ctx context.Context, repoOwner, repoName string, prNumber int) (string, error) {
 	var pr pullRequest
 	if err := c.rest.DoWithContext(

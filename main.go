@@ -34,6 +34,7 @@ func main() {
 type ghAPIClient interface {
 	ListPullRequests(ctx context.Context, repoOwner, repoName string, limit int) (*entity.SimplePRList, error)
 	GetPRLatestCommitSHA(ctx context.Context, repoOwner, repoName string, prNumber int) (string, error)
+	ListCheckRuns(ctx context.Context, repoOwner, repoName string, commitSHA string) (*entity.SimpleCheckRunList, error)
 }
 
 func run(client ghAPIClient) error {
@@ -76,6 +77,13 @@ func run(client ghAPIClient) error {
 	}
 
 	fmt.Printf("Latest commit SHA: %s\n", sha)
+
+	checkRunList, err := client.ListCheckRuns(ctx, repo.Owner, repo.Name, sha)
+	if err != nil {
+		return fmt.Errorf("failed to list check runs: %w", err)
+	}
+
+	fmt.Printf("Total check runs: %d\n", checkRunList.Total)
 
 	return nil
 }
