@@ -13,10 +13,6 @@ import (
 	"github.com/kmtym1998/gh-prowl/entity"
 )
 
-type ghAPIClient interface {
-	ListPullRequests(ctx context.Context, repoOwner, repoName string, limit int) (*entity.SimplePRList, error)
-}
-
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -33,6 +29,11 @@ func main() {
 		color.Red(err.Error())
 		panic("failed to execute command")
 	}
+}
+
+type ghAPIClient interface {
+	ListPullRequests(ctx context.Context, repoOwner, repoName string, limit int) (*entity.SimplePRList, error)
+	GetPRLatestCommitSHA(ctx context.Context, repoOwner, repoName string, prNumber int) (string, error)
 }
 
 func run(client ghAPIClient) error {
@@ -68,6 +69,13 @@ func run(client ghAPIClient) error {
 	}
 
 	fmt.Printf("Selected PR: %s\n", prList.Items[selected].Title)
+
+	sha, err := client.GetPRLatestCommitSHA(ctx, repo.Owner, repo.Name, prList.Items[selected].Number)
+	if err != nil {
+		return fmt.Errorf("failed to get latest commit SHA: %w", err)
+	}
+
+	fmt.Printf("Latest commit SHA: %s\n", sha)
 
 	return nil
 }
