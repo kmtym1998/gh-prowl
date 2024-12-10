@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"os"
 	"sort"
@@ -19,7 +20,11 @@ import (
 
 	"github.com/kmtym1998/gh-prowl/api"
 	"github.com/kmtym1998/gh-prowl/entity"
+	"github.com/kmtym1998/gh-prowl/notify"
 )
+
+//go:embed notify/assets/*.mp3
+var embedded embed.FS
 
 func main() {
 	defer func() {
@@ -27,6 +32,17 @@ func main() {
 			color.Red(fmt.Sprint(r))
 		}
 	}()
+
+	f, err := embedded.Open("notify/assets/chime.mp3")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	soundNotifier, err := notify.NewMP3Notifier(f)
+	if err != nil {
+		panic(err)
+	}
 
 	client, err := api.NewAPIClient()
 	if err != nil {
@@ -38,10 +54,12 @@ func main() {
 		panic(err)
 	}
 
-	if err := run(client, option{
+	if err := run(option{
 		repoOwner:       repo.Owner,
 		repoName:        repo.Name,
 		pollingInterval: 5 * time.Second,
+		apiClient:       client,
+		soundNotifier:   soundNotifier,
 	}); err != nil {
 		color.Red(err.Error())
 		panic("failed to execute command")
@@ -54,18 +72,24 @@ type ghAPIClient interface {
 	ListCheckRuns(ctx context.Context, repoOwner, repoName string, commitSHA string) (*entity.SimpleCheckRunList, error)
 }
 
+type notifier interface {
+	Notify() error
+}
+
 type option struct {
 	repoOwner       string
 	repoName        string
 	pollingInterval time.Duration
+	apiClient       ghAPIClient
+	soundNotifier   notifier
 }
 
-func run(client ghAPIClient, o option) error {
+func run(o option) error {
 	_ctx := context.Background()
 	ctx, cancel := context.WithTimeout(_ctx, 30*time.Minute)
 	defer cancel()
 
-	prList, err := client.ListPullRequests(ctx, o.repoOwner, o.repoName, 10)
+	prList, err := o.apiClient.ListPullRequests(ctx, o.repoOwner, o.repoName, 10)
 	if err != nil {
 		return fmt.Errorf("failed to list pull requests: %w", err)
 	}
@@ -93,7 +117,7 @@ func run(client ghAPIClient, o option) error {
 	fmt.Printf("🦉 Selected PR: %s\n", prList.Items[selected].Title)
 	fmt.Printf("🦉 View this PR on GitHub: %s\n", prList.Items[selected].URL)
 
-	sha, err := client.GetPRLatestCommitSHA(ctx, o.repoOwner, o.repoName, prList.Items[selected].Number)
+	sha, err := o.apiClient.GetPRLatestCommitSHA(ctx, o.repoOwner, o.repoName, prList.Items[selected].Number)
 	if err != nil {
 		return fmt.Errorf("failed to get latest commit SHA: %w", err)
 	}
@@ -108,7 +132,7 @@ func run(client ghAPIClient, o option) error {
 			return ctx.Err()
 		}
 
-		checkRunList, err := client.ListCheckRuns(ctx, o.repoOwner, o.repoName, sha)
+		checkRunList, err := o.apiClient.ListCheckRuns(ctx, o.repoOwner, o.repoName, sha)
 		if err != nil {
 			if err == context.DeadlineExceeded || err == context.Canceled {
 				return err
@@ -181,7 +205,7 @@ func run(client ghAPIClient, o option) error {
 
 		printer.Render()
 
-		return nil
+		return o.soundNotifier.Notify()
 	}
 }
 
