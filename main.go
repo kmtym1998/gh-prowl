@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/cli/cli/v2/pkg/iostreams"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/repository"
@@ -97,7 +98,10 @@ func run(client ghAPIClient, o option) error {
 		return fmt.Errorf("failed to get latest commit SHA: %w", err)
 	}
 
-	fmt.Printf("🦉 Watching %s/%s@%s checks\n", o.repoOwner, o.repoName, sha)
+	indicator := spinner.New(spinner.CharSets[1], 100*time.Millisecond)
+	indicator.Suffix = " Waiting for checks to complete..."
+	indicator.Start()
+	defer indicator.Stop()
 
 	for {
 		if ctx.Err() != nil {
@@ -122,16 +126,16 @@ func run(client ghAPIClient, o option) error {
 
 		type output struct {
 			Name       string
-			Status     string
 			Conclusion string
+			URL        string
 		}
 		resultOutputs := []output{}
 		for _, checkRun := range checkRunList.Items {
 			if checkRun.Conclusion == nil {
 				resultOutputs = append(resultOutputs, output{
 					Name:       checkRun.Name,
-					Status:     checkRun.Status.String(),
 					Conclusion: "NULL",
+					URL:        checkRun.URL,
 				})
 				continue
 			}
@@ -139,29 +143,39 @@ func run(client ghAPIClient, o option) error {
 			if !checkRun.Conclusion.IsSuccess() {
 				resultOutputs = append(resultOutputs, output{
 					Name:       checkRun.Name,
-					Status:     checkRun.Status.String(),
 					Conclusion: checkRun.Conclusion.String(),
+					URL:        checkRun.URL,
 				})
 				continue
 			}
 
 			resultOutputs = append(resultOutputs, output{
 				Name:       checkRun.Name,
-				Status:     checkRun.Status.String(),
 				Conclusion: checkRun.Conclusion.String(),
+				URL:        checkRun.URL,
 			})
 		}
 		sort.Slice(resultOutputs, func(i, j int) bool {
 			return resultOutputs[i].Name < resultOutputs[j].Name
 		})
 
-		// FIXME: more beautiful output
-		printer := tableprinter.New(os.Stdout, false, 300)
-		printer.AddHeader([]string{"Name", "Status", "Conclusion"})
+		indicator.Stop()
+
+		printer := tableprinter.New(os.Stdout, true, 1000)
+
+		printer.AddHeader([]string{"Check Name", "Conclusion"}, tableprinter.WithColor(grayWithBoldAndUnderline))
 		for _, output := range resultOutputs {
 			printer.AddField(output.Name)
-			printer.AddField(output.Status)
-			printer.AddField(output.Conclusion)
+			printer.AddField(output.Conclusion, tableprinter.WithColor(func(s string) string {
+				switch s {
+				case entity.CheckRunConclusionSuccess.String():
+					return green(s)
+				case entity.CheckRunConclusionFailure.String():
+					return red(s)
+				default:
+					return s
+				}
+			}))
 			printer.EndRow()
 		}
 
@@ -169,4 +183,16 @@ func run(client ghAPIClient, o option) error {
 
 		return nil
 	}
+}
+
+func red(s string) string {
+	return "\033[31m" + s + "\033[0m"
+}
+
+func green(s string) string {
+	return "\033[32m" + s + "\033[0m"
+}
+
+func grayWithBoldAndUnderline(s string) string {
+	return "\033[1;4;90m" + s + "\033[0m"
 }

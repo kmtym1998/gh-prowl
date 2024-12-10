@@ -5,9 +5,10 @@ type SimpleCheckRunList struct {
 	Items []*SimpleCheckRun
 }
 type SimpleCheckRun struct {
-	Name       string              `json:"name"`
-	Status     CheckRunStatus      `json:"status"`
-	Conclusion *CheckRunConclusion `json:"conclusion"`
+	Name       string
+	Status     CheckRunStatus
+	Conclusion *CheckRunConclusion
+	URL        string
 }
 
 type CheckRunStatus string

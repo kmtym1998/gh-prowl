@@ -14,6 +14,7 @@ type checkRunList struct {
 		Name       string  `json:"name"`
 		Status     string  `json:"status"`
 		Conclusion *string `json:"conclusion"`
+		HTMLURL    string  `json:"html_url"`
 	} `json:"check_runs"`
 }
 
@@ -36,6 +37,7 @@ func (c *APIClient) ListCheckRuns(ctx context.Context, repoOwner, repoName strin
 			Name:       checkRun.Name,
 			Status:     entity.CheckRunStatus(checkRun.Status),
 			Conclusion: (*entity.CheckRunConclusion)(checkRun.Conclusion),
+			URL:        checkRun.HTMLURL,
 		})
 	}
 
