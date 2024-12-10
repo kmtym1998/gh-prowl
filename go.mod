@@ -6,6 +6,7 @@ require (
 	github.com/cli/cli/v2 v2.63.2
 	github.com/cli/go-gh/v2 v2.11.1
 	github.com/fatih/color v1.18.0
+	github.com/samber/lo v1.47.0
 )
 
 require (

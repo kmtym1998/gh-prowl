@@ -16,6 +16,10 @@ const (
 	CheckRunStatusCompleted CheckRunStatus = "completed"
 )
 
+func (c CheckRunStatus) String() string {
+	return string(c)
+}
+
 type CheckRunConclusion string
 
 const (
@@ -30,4 +34,8 @@ const (
 
 func (c CheckRunConclusion) IsSuccess() bool {
 	return c == CheckRunConclusionSuccess
+}
+
+func (c CheckRunConclusion) String() string {
+	return string(c)
 }

@@ -3,12 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/cli/cli/v2/pkg/iostreams"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/repository"
+	"github.com/cli/go-gh/v2/pkg/tableprinter"
+
 	"github.com/fatih/color"
+	"github.com/samber/lo"
+
 	"github.com/kmtym1998/gh-prowl/api"
 	"github.com/kmtym1998/gh-prowl/entity"
 )
@@ -25,7 +32,16 @@ func main() {
 		panic(err)
 	}
 
-	if err := run(client); err != nil {
+	repo, err := repository.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := run(client, option{
+		repoOwner:       repo.Owner,
+		repoName:        repo.Name,
+		pollingInterval: 5 * time.Second,
+	}); err != nil {
 		color.Red(err.Error())
 		panic("failed to execute command")
 	}
@@ -37,14 +53,18 @@ type ghAPIClient interface {
 	ListCheckRuns(ctx context.Context, repoOwner, repoName string, commitSHA string) (*entity.SimpleCheckRunList, error)
 }
 
-func run(client ghAPIClient) error {
-	ctx := context.Background()
-	repo, err := repository.Current()
-	if err != nil {
-		return fmt.Errorf("failed to get current repository: %w", err)
-	}
+type option struct {
+	repoOwner       string
+	repoName        string
+	pollingInterval time.Duration
+}
 
-	prList, err := client.ListPullRequests(ctx, repo.Owner, repo.Name, 10)
+func run(client ghAPIClient, o option) error {
+	_ctx := context.Background()
+	ctx, cancel := context.WithTimeout(_ctx, 30*time.Minute)
+	defer cancel()
+
+	prList, err := client.ListPullRequests(ctx, o.repoOwner, o.repoName, 10)
 	if err != nil {
 		return fmt.Errorf("failed to list pull requests: %w", err)
 	}
@@ -69,21 +89,83 @@ func run(client ghAPIClient) error {
 		return fmt.Errorf("failed to prompt user: %w", err)
 	}
 
-	fmt.Printf("Selected PR: %s\n", prList.Items[selected].Title)
+	fmt.Printf("🦉 Selected PR: %s\n", prList.Items[selected].Title)
 
-	sha, err := client.GetPRLatestCommitSHA(ctx, repo.Owner, repo.Name, prList.Items[selected].Number)
+	sha, err := client.GetPRLatestCommitSHA(ctx, o.repoOwner, o.repoName, prList.Items[selected].Number)
 	if err != nil {
 		return fmt.Errorf("failed to get latest commit SHA: %w", err)
 	}
 
-	fmt.Printf("Latest commit SHA: %s\n", sha)
+	fmt.Printf("🦉 Watching %s/%s@%s checks\n", o.repoOwner, o.repoName, sha)
 
-	checkRunList, err := client.ListCheckRuns(ctx, repo.Owner, repo.Name, sha)
-	if err != nil {
-		return fmt.Errorf("failed to list check runs: %w", err)
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		checkRunList, err := client.ListCheckRuns(ctx, o.repoOwner, o.repoName, sha)
+		if err != nil {
+			if err == context.DeadlineExceeded || err == context.Canceled {
+				return err
+			}
+
+			return fmt.Errorf("failed to list check runs: %w", err)
+		}
+
+		if lo.SomeBy(checkRunList.Items, func(checkRun *entity.SimpleCheckRun) bool {
+			return checkRun.Status != entity.CheckRunStatusCompleted
+		}) {
+			time.Sleep(o.pollingInterval)
+			continue
+		}
+
+		type output struct {
+			Name       string
+			Status     string
+			Conclusion string
+		}
+		resultOutputs := []output{}
+		for _, checkRun := range checkRunList.Items {
+			if checkRun.Conclusion == nil {
+				resultOutputs = append(resultOutputs, output{
+					Name:       checkRun.Name,
+					Status:     checkRun.Status.String(),
+					Conclusion: "NULL",
+				})
+				continue
+			}
+
+			if !checkRun.Conclusion.IsSuccess() {
+				resultOutputs = append(resultOutputs, output{
+					Name:       checkRun.Name,
+					Status:     checkRun.Status.String(),
+					Conclusion: checkRun.Conclusion.String(),
+				})
+				continue
+			}
+
+			resultOutputs = append(resultOutputs, output{
+				Name:       checkRun.Name,
+				Status:     checkRun.Status.String(),
+				Conclusion: checkRun.Conclusion.String(),
+			})
+		}
+		sort.Slice(resultOutputs, func(i, j int) bool {
+			return resultOutputs[i].Name < resultOutputs[j].Name
+		})
+
+		// FIXME: more beautiful output
+		printer := tableprinter.New(os.Stdout, false, 300)
+		printer.AddHeader([]string{"Name", "Status", "Conclusion"})
+		for _, output := range resultOutputs {
+			printer.AddField(output.Name)
+			printer.AddField(output.Status)
+			printer.AddField(output.Conclusion)
+			printer.EndRow()
+		}
+
+		printer.Render()
+
+		return nil
 	}
-
-	fmt.Printf("Total check runs: %d\n", checkRunList.Total)
-
-	return nil
 }
