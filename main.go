@@ -90,6 +90,7 @@ func run(client ghAPIClient, o option) error {
 	}
 
 	fmt.Printf("🦉 Selected PR: %s\n", prList.Items[selected].Title)
+	fmt.Printf("🦉 View this PR on GitHub: %s\n", prList.Items[selected].URL)
 
 	sha, err := client.GetPRLatestCommitSHA(ctx, o.repoOwner, o.repoName, prList.Items[selected].Number)
 	if err != nil {

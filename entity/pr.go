@@ -9,6 +9,7 @@ type SimplePR struct {
 	RepoName  string
 	Number    int
 	Title     string
+	URL       string
 	Author    string
 	BaseRef   string
 	HeadRef   string

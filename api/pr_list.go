@@ -13,6 +13,7 @@ type listPullRequestsResult struct {
 			Nodes      []struct {
 				Number int    `json:"number"`
 				Title  string `json:"title"`
+				URL    string `json:"url"`
 				Author struct {
 					Login string `json:"login"`
 				} `json:"author"`
@@ -57,6 +58,7 @@ func (c *APIClient) ListPullRequests(ctx context.Context, repoOwner, repoName st
 					nodes {
 						number
 						title
+						url
 						author {
 							login
 						}
@@ -102,6 +104,7 @@ func (c *APIClient) ListPullRequests(ctx context.Context, repoOwner, repoName st
 			RepoName:  repoName,
 			Number:    pr.Number,
 			Title:     pr.Title,
+			URL:       pr.URL,
 			Author:    pr.Author.Login,
 			BaseRef:   pr.BaseRef.Name,
 			HeadRef:   pr.HeadRef.Name,
