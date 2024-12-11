@@ -75,6 +75,10 @@ func rootRunE(o *rootOption) error {
 }
 
 func resolveRef(ctx context.Context, o *rootOption) (string, error) {
+	if o.targetRef != "" && o.current {
+		return "", errors.New("cannot specify both --current-branch and --ref")
+	}
+
 	if o.targetRef != "" {
 		return o.targetRef, nil
 	}
