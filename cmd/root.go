@@ -29,71 +29,85 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 				return fmt.Errorf("failed to get flag: %w", err)
 			}
 
-			return run(&rootOption{
-				ec:      ec,
-				current: current,
+			targetBranch, err := cmd.Flags().GetString("branch")
+			if err != nil {
+				return fmt.Errorf("failed to get flag: %w", err)
+			}
+
+			return rootRunE(&rootOption{
+				ec:           ec,
+				current:      current,
+				targetBranch: targetBranch,
 			})
 		},
 	}
 
 	f := rootCmd.Flags()
 	f.BoolP("current-branch", "c", false, "monitor the latest check status of the current branch's PR")
+	f.StringP("branch", "b", "", "monitor the latest check status of the specified branch")
 
 	return rootCmd
 }
 
 type rootOption struct {
-	ec      *ExecutionContext
-	current bool
+	ec           *ExecutionContext
+	current      bool
+	targetBranch string
 }
 
-func run(o *rootOption) error {
+func rootRunE(o *rootOption) error {
 	_ctx := context.Background()
 	ctx, cancel := context.WithTimeout(_ctx, 30*time.Minute)
 	defer cancel()
 
-	prList, err := o.ec.ApiClient.ListPullRequests(ctx, o.ec.RepoOwner, o.ec.RepoName, 10)
-	if err != nil {
-		return fmt.Errorf("failed to list pull requests: %w", err)
-	}
-
-	var selectedPR *entity.SimplePR
-	if o.current {
-		currentBranchPR, found := lo.Find(prList.Items, func(pr *entity.SimplePR) bool {
-			return pr.HeadRef == o.ec.CurrentBranch
-		})
-		if found {
-			selectedPR = currentBranchPR
-		}
-	}
-
-	if selectedPR == nil {
-		io := iostreams.System()
-		fmt.Printf("Total PRs: %d\n", prList.Total)
-		p := prompter.New(io.In, io.Out, io.ErrOut)
-		selected, err := p.Select(
-			"Select a PR to prowl",
-			"",
-			lo.Map(prList.Items, func(pr *entity.SimplePR, _ int) string {
-				return fmt.Sprintf("#%d %s", pr.Number, pr.Title)
-			}),
-		)
+	var ref string
+	if o.targetBranch == "" {
+		prList, err := o.ec.ApiClient.ListPullRequests(ctx, o.ec.RepoOwner, o.ec.RepoName, 10)
 		if err != nil {
-			if strings.Contains(err.Error(), "interrupt") {
-				return nil
-			}
-			return fmt.Errorf("failed to prompt user: %w", err)
+			return fmt.Errorf("failed to list pull requests: %w", err)
 		}
 
-		selectedPR = prList.Items[selected]
-	}
+		var selectedPR *entity.SimplePR
+		if o.current {
+			currentBranchPR, found := lo.Find(prList.Items, func(pr *entity.SimplePR) bool {
+				return pr.HeadRef == o.ec.CurrentBranch
+			})
+			if found {
+				selectedPR = currentBranchPR
+			}
+		}
 
-	fmt.Printf("🦉 Selected PR: %s\n", selectedPR.Title)
-	fmt.Printf("🦉 View this PR on GitHub: %s\n", selectedPR.URL)
+		if selectedPR == nil {
+			io := iostreams.System()
+			fmt.Printf("Total PRs: %d\n", prList.Total)
+			p := prompter.New(io.In, io.Out, io.ErrOut)
+			selected, err := p.Select(
+				"Select a PR to prowl",
+				"",
+				lo.Map(prList.Items, func(pr *entity.SimplePR, _ int) string {
+					return fmt.Sprintf("#%d %s", pr.Number, pr.Title)
+				}),
+			)
+			if err != nil {
+				if strings.Contains(err.Error(), "interrupt") {
+					return nil
+				}
+				return fmt.Errorf("failed to prompt user: %w", err)
+			}
 
-	sha, err := o.ec.ApiClient.GetPRLatestCommitSHA(ctx, o.ec.RepoOwner, o.ec.RepoName, selectedPR.Number)
-	if err != nil {
-		return fmt.Errorf("failed to get latest commit SHA: %w", err)
+			selectedPR = prList.Items[selected]
+		}
+
+		fmt.Printf("🦉 Selected PR: %s\n", selectedPR.Title)
+		fmt.Printf("🦉 View this PR on GitHub: %s\n", selectedPR.URL)
+
+		sha, err := o.ec.ApiClient.GetPRLatestCommitSHA(ctx, o.ec.RepoOwner, o.ec.RepoName, selectedPR.Number)
+		if err != nil {
+			return fmt.Errorf("failed to get latest commit SHA: %w", err)
+		}
+		ref = sha
+	} else {
+		ref = o.targetBranch
 	}
 
 	indicator := spinner.New(spinner.CharSets[1], 100*time.Millisecond)
@@ -106,7 +120,7 @@ func run(o *rootOption) error {
 			return ctx.Err()
 		}
 
-		checkRunList, err := o.ec.ApiClient.ListCheckRuns(ctx, o.ec.RepoOwner, o.ec.RepoName, sha)
+		checkRunList, err := o.ec.ApiClient.ListCheckRuns(ctx, o.ec.RepoOwner, o.ec.RepoName, ref)
 		if err != nil {
 			if err == context.DeadlineExceeded || err == context.Canceled {
 				return err
