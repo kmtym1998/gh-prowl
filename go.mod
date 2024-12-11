@@ -1,6 +1,6 @@
 module github.com/kmtym1998/gh-prowl
 
-go 1.23.0
+go 1.23
 
 require (
 	github.com/briandowns/spinner v1.18.1
