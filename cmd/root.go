@@ -36,10 +36,16 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 				return fmt.Errorf("failed to get flag: %w", err)
 			}
 
+			silent, err := cmd.Flags().GetBool("silent")
+			if err != nil {
+				return fmt.Errorf("failed to get flag: %w", err)
+			}
+
 			return rootRunE(&rootOption{
 				ec:        ec,
 				current:   current,
 				targetRef: targetRef,
+				silent:    silent,
 			})
 		},
 	}
@@ -47,6 +53,7 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 	f := rootCmd.Flags()
 	f.BoolP("current-branch", "c", false, "monitor the latest check status of the current branch's PR")
 	f.StringP("ref", "r", "", "monitor the latest check status of the specified branch")
+	f.BoolP("silent", "s", false, "do not play a sound when all checks are completed")
 
 	return rootCmd
 }
@@ -55,6 +62,7 @@ type rootOption struct {
 	ec        *ExecutionContext
 	current   bool
 	targetRef string
+	silent    bool
 }
 
 func rootRunE(o *rootOption) error {
@@ -155,7 +163,14 @@ func monitorCheckRuns(ctx context.Context, o *rootOption, ref string, indicator 
 
 		indicator.Stop()
 		printCheckRunResults(checkRunList.Items)
-		return o.ec.SoundNotifier.Notify()
+
+		if !o.silent {
+			if err := o.ec.SoundNotifier.Notify(); err != nil {
+				return fmt.Errorf("failed to notify: %w", err)
+			}
+		}
+
+		return nil
 	}
 }
 

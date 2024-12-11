@@ -25,6 +25,7 @@ gh prowl [flags]
 
 - `-c, --current-branch`: Monitor the latest check status of the pull request linked to the current branch.
 - `-b, --branch <branch>`: Monitor the latest check status of the specified branch.
+- `-s, --silent`: Do not play a sound when all checks are completed
 
 If no PR is linked to the current branch, the extension will prompt you to select one from a list.
 
