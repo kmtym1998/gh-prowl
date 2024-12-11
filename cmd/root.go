@@ -8,13 +8,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/briandowns/spinner"
 	"github.com/cli/cli/v2/pkg/iostreams"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/tableprinter"
-	"github.com/kmtym1998/gh-prowl/entity"
+
+	"github.com/briandowns/spinner"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+
+	"github.com/kmtym1998/gh-prowl/entity"
 )
 
 func NewRootCmd(ec *ExecutionContext) *cobra.Command {
@@ -22,13 +24,20 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 		Use:   "gh-prowl",
 		Short: "Notify GitHub Actions status to your device",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			current := cmd.Flags().BoolP("current-branch", "c", false, "monitor the latest check status of the current branch's PR")
+			current, err := cmd.Flags().GetBool("current-branch")
+			if err != nil {
+				return fmt.Errorf("failed to get flag: %w", err)
+			}
+
 			return run(&rootOption{
 				ec:      ec,
-				current: lo.FromPtr(current),
+				current: current,
 			})
 		},
 	}
+
+	f := rootCmd.Flags()
+	f.BoolP("current-branch", "c", false, "monitor the latest check status of the current branch's PR")
 
 	return rootCmd
 }
@@ -48,30 +57,41 @@ func run(o *rootOption) error {
 		return fmt.Errorf("failed to list pull requests: %w", err)
 	}
 
-	io := iostreams.System()
-	fmt.Printf("Total PRs: %d\n", prList.Total)
-	p := prompter.New(io.In, io.Out, io.ErrOut)
-	selected, err := p.Select(
-		"Select a PR to prowl",
-		"",
-		func() (result []string) {
-			for _, pr := range prList.Items {
-				result = append(result, fmt.Sprintf("#%d %s", pr.Number, pr.Title))
-			}
-			return
-		}(),
-	)
-	if err != nil {
-		if strings.Contains(err.Error(), "interrupt") {
-			return nil
+	var selectedPR *entity.SimplePR
+	if o.current {
+		currentBranchPR, found := lo.Find(prList.Items, func(pr *entity.SimplePR) bool {
+			return pr.HeadRef == o.ec.CurrentBranch
+		})
+		if found {
+			selectedPR = currentBranchPR
 		}
-		return fmt.Errorf("failed to prompt user: %w", err)
 	}
 
-	fmt.Printf("🦉 Selected PR: %s\n", prList.Items[selected].Title)
-	fmt.Printf("🦉 View this PR on GitHub: %s\n", prList.Items[selected].URL)
+	if selectedPR == nil {
+		io := iostreams.System()
+		fmt.Printf("Total PRs: %d\n", prList.Total)
+		p := prompter.New(io.In, io.Out, io.ErrOut)
+		selected, err := p.Select(
+			"Select a PR to prowl",
+			"",
+			lo.Map(prList.Items, func(pr *entity.SimplePR, _ int) string {
+				return fmt.Sprintf("#%d %s", pr.Number, pr.Title)
+			}),
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "interrupt") {
+				return nil
+			}
+			return fmt.Errorf("failed to prompt user: %w", err)
+		}
 
-	sha, err := o.ec.ApiClient.GetPRLatestCommitSHA(ctx, o.ec.RepoOwner, o.ec.RepoName, prList.Items[selected].Number)
+		selectedPR = prList.Items[selected]
+	}
+
+	fmt.Printf("🦉 Selected PR: %s\n", selectedPR.Title)
+	fmt.Printf("🦉 View this PR on GitHub: %s\n", selectedPR.URL)
+
+	sha, err := o.ec.ApiClient.GetPRLatestCommitSHA(ctx, o.ec.RepoOwner, o.ec.RepoName, selectedPR.Number)
 	if err != nil {
 		return fmt.Errorf("failed to get latest commit SHA: %w", err)
 	}
