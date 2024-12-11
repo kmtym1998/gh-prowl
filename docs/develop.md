@@ -1,7 +1,15 @@
 # develop
 
-Next Steps
+```sh
+# install dependencies
+go mod tidy
 
-- run 'cd gh-prowl; gh extension install .; gh prowl' to see your new extension in action
-- run 'go build && gh prowl' to see changes in your code as you develop
-- run 'gh repo create' to share your extension with others
+# build extension binary
+go build
+
+# install to your extension. Run this in the same directory where you executed 'go build'.
+gh extension install .
+
+# execute binary
+gh prowl
+```

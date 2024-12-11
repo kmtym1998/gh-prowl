@@ -23,7 +23,8 @@ import (
 func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "gh-prowl",
-		Short: "Notify GitHub Actions status to your device",
+		Short: "Track the progress of repository checks and notify upon completion",
+		Long:  `This command allows you to monitor the status of GitHub Actions checks for a pull request (PR) or a specific branch. If used with the "--current-branch" flag, it monitors the PR associated with the current branch. Otherwise, you can select a PR or specify a branch manually.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			current, err := cmd.Flags().GetBool("current-branch")
 			if err != nil {
