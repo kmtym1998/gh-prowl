@@ -19,12 +19,12 @@ type checkRunList struct {
 }
 
 // https://docs.github.com/ja/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-for-a-git-reference
-func (c *APIClient) ListCheckRuns(ctx context.Context, repoOwner, repoName string, commitSHA string) (*entity.SimpleCheckRunList, error) {
+func (c *APIClient) ListCheckRuns(ctx context.Context, repoOwner, repoName string, ref string) (*entity.SimpleCheckRunList, error) {
 	var checkRuns checkRunList
 	if err := c.rest.DoWithContext(
 		ctx,
 		http.MethodGet,
-		fmt.Sprintf("repos/%s/%s/commits/%s/check-runs?per_page=100", repoOwner, repoName, commitSHA),
+		fmt.Sprintf("repos/%s/%s/commits/%s/check-runs?per_page=100", repoOwner, repoName, ref),
 		nil,
 		&checkRuns,
 	); err != nil {
