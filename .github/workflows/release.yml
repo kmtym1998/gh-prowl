@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 permissions:
   contents: write
 
@@ -15,16 +16,23 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.23"
+
       - name: Enable cgo
         run: echo "CGO_ENABLED=1" >> $GITHUB_ENV
+
       - name: Install ALSA dependencies
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev
-      - name: Set up Android NDK (if needed)
+
+      - name: Download and install Android NDK
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends android-ndk-r21e
+          curl -L https://dl.google.com/android/repository/android-ndk-r21e-linux-x86_64.zip -o android-ndk.zip
+          unzip android-ndk.zip -d $HOME
+          mv $HOME/android-ndk-r21e $HOME/android-ndk
+          echo "export NDK_HOME=$HOME/android-ndk" >> $GITHUB_ENV
+          echo "export PATH=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH" >> $GITHUB_ENV
         env:
           DEBIAN_FRONTEND: noninteractive
+
       - uses: cli/gh-extension-precompile@v1
         with:
           go_version: "1.23"
