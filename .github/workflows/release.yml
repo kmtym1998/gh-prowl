@@ -21,4 +21,4 @@ jobs:
           CGO_ENABLED: 1
           CC: gcc
           CXX: g++
-          CGO_CFLAGS: "-Wno-error=unused-command-line-argument"
+          CGO_CFLAGS: "-D_GNU_SOURCE -Wno-error=unused-command-line-argument"
