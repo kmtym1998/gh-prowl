@@ -2,8 +2,6 @@ module github.com/kmtym1998/gh-prowl
 
 go 1.21
 
-toolchain go1.23
-
 require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/cli/go-gh/v2 v2.11.1
