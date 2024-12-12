@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kmtym1998/gh-prowl/entity"
+	"github.com/kmtym1998/gh-prowl/notify"
 )
 
 func NewRootCmd(ec *ExecutionContext) *cobra.Command {
@@ -41,11 +42,14 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 				return fmt.Errorf("failed to get flag: %w", err)
 			}
 
+			if silent {
+				ec.SoundNotifier = notify.NewNoopNotifier()
+			}
+
 			return rootRunE(&rootOption{
 				ec:        ec,
 				current:   current,
 				targetRef: targetRef,
-				silent:    silent,
 			})
 		},
 	}
@@ -62,7 +66,6 @@ type rootOption struct {
 	ec        *ExecutionContext
 	current   bool
 	targetRef string
-	silent    bool
 }
 
 func rootRunE(o *rootOption) error {
@@ -164,10 +167,8 @@ func monitorCheckRuns(ctx context.Context, o *rootOption, ref string, indicator 
 		indicator.Stop()
 		printCheckRunResults(checkRunList.Items)
 
-		if !o.silent {
-			if err := o.ec.SoundNotifier.Notify(); err != nil {
-				return fmt.Errorf("failed to notify: %w", err)
-			}
+		if err := o.ec.SoundNotifier.Notify(); err != nil {
+			return fmt.Errorf("failed to notify: %w", err)
 		}
 
 		return nil
