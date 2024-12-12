@@ -16,6 +16,4 @@ jobs:
         with:
           go_version: "1.21"
         env:
-          CGO_ENABLED: 1
-          CC: clang
-          CXX: clang++
+          CGO_ENABLED: 0
