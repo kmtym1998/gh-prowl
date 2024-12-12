@@ -22,7 +22,7 @@ type ExecutionContext struct {
 }
 
 func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
-	soundNotifier, err := notify.NewMP3Notifier(soundFile)
+	soundNotifier, err := notify.NewNotifier(soundFile)
 	if err != nil {
 		return nil, err
 	}

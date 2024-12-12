@@ -7,11 +7,13 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/tableprinter"
 	"github.com/cli/go-gh/v2/pkg/term"
+	"github.com/fatih/color"
 
 	"github.com/briandowns/spinner"
 	"github.com/samber/lo"
@@ -177,11 +179,23 @@ func monitorCheckRuns(ctx context.Context, o *rootOption, ref string, indicator 
 		}
 
 		indicator.Stop()
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			if err := o.ec.SoundNotifier.Notify(ctx, entity.NotificationContent{
+				Title:   "🦉 gh prowl",
+				Message: fmt.Sprintf("All checks for %s are completed", ref),
+			}); err != nil {
+				color.Red("failed to notify: %v\n", err)
+			}
+
+			wg.Done()
+		}()
+
 		printCheckRunResults(checkRunList.Items)
 
-		if err := o.ec.SoundNotifier.Notify(); err != nil {
-			return fmt.Errorf("failed to notify: %w", err)
-		}
+		wg.Wait()
 
 		return nil
 	}

@@ -9,5 +9,5 @@ type GitHubAPIClient interface {
 }
 
 type Notifier interface {
-	Notify() error
+	Notify(context.Context, NotificationContent) error
 }
