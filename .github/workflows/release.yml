@@ -9,11 +9,16 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install clang and build tools
+        run: sudo apt-get update && sudo apt-get install -y clang build-essential gcc g++
       - uses: cli/gh-extension-precompile@v2
         with:
           go_version: "1.21"
         env:
-          CGO_ENABLED: 0
+          CGO_ENABLED: 1
+          CC: gcc
+          CXX: g++
+          CGO_CFLAGS: "-Wno-error=unused-command-line-argument"
