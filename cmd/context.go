@@ -22,10 +22,10 @@ type ExecutionContext struct {
 }
 
 func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
-	// soundNotifier, err := notify.NewMP3Notifier(soundFile)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	soundNotifier, err := notify.NewMP3Notifier(soundFile)
+	if err != nil {
+		return nil, err
+	}
 
 	client, err := api.NewAPIClient()
 	if err != nil {
@@ -48,6 +48,6 @@ func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
 		CurrentBranch:   strings.TrimSpace(string(branchName)),
 		PollingInterval: 5 * time.Second,
 		ApiClient:       client,
-		SoundNotifier:   notify.NewNoopNotifier(),
+		SoundNotifier:   soundNotifier,
 	}, nil
 }

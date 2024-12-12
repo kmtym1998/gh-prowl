@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/kmtym1998/gh-prowl/entity"
+	"github.com/samber/lo"
 )
 
 type listPullRequestsResult struct {
@@ -85,7 +86,7 @@ func (c *APIClient) ListPullRequests(ctx context.Context, repoOwner, repoName st
 			}
 		}`
 
-	validLimit := min(limit, 100)
+	validLimit := lo.Min([]int{limit, 100})
 	variables := map[string]interface{}{
 		"owner": repoOwner,
 		"repo":  repoName,
