@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cli/cli/v2/pkg/iostreams"
 	"github.com/cli/go-gh/v2/pkg/prompter"
 	"github.com/cli/go-gh/v2/pkg/tableprinter"
+	"github.com/cli/go-gh/v2/pkg/term"
 
 	"github.com/briandowns/spinner"
 	"github.com/samber/lo"
@@ -123,9 +123,21 @@ func selectPR(o *rootOption, prList *entity.SimplePRList) (*entity.SimplePR, err
 		}
 	}
 
-	io := iostreams.System()
+	term := term.FromEnv()
 	fmt.Printf("Total PRs: %d\n", prList.Total)
-	p := prompter.New(io.In, io.Out, io.ErrOut)
+	in, ok := term.In().(*os.File)
+	if !ok {
+		return nil, errors.New("failed to initialize prompter")
+	}
+	out, ok := term.Out().(*os.File)
+	if !ok {
+		return nil, errors.New("failed to initialize prompter")
+	}
+	errOut, ok := term.ErrOut().(*os.File)
+	if !ok {
+		return nil, errors.New("failed to initialize prompter")
+	}
+	p := prompter.New(in, out, errOut)
 	selected, err := p.Select(
 		"Select a PR to prowl",
 		"",
