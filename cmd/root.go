@@ -28,31 +28,33 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 		Use:   "gh-prowl",
 		Short: "Track the progress of repository checks and notify upon completion",
 		Long:  `This command allows you to monitor the status of GitHub Actions checks for a pull request (PR) or a specific branch. If used with the "--current-branch" flag, it monitors the PR associated with the current branch. Otherwise, you can select a PR or specify a branch manually.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Run: func(cmd *cobra.Command, args []string) {
 			current, err := cmd.Flags().GetBool("current-branch")
 			if err != nil {
-				return fmt.Errorf("failed to get flag: %w", err)
+				panic(fmt.Errorf("failed to get flag: %w", err))
 			}
 
 			targetRef, err := cmd.Flags().GetString("ref")
 			if err != nil {
-				return fmt.Errorf("failed to get flag: %w", err)
+				panic(fmt.Errorf("failed to get flag: %w", err))
 			}
 
 			silent, err := cmd.Flags().GetBool("silent")
 			if err != nil {
-				return fmt.Errorf("failed to get flag: %w", err)
+				panic(fmt.Errorf("failed to get flag: %w", err))
 			}
 
 			if silent {
 				ec.SoundNotifier = notify.NewNoopNotifier()
 			}
 
-			return rootRunE(&rootOption{
+			if err := rootRunE(&rootOption{
 				ec:        ec,
 				current:   current,
 				targetRef: targetRef,
-			})
+			}); err != nil {
+				panic(err.Error())
+			}
 		},
 	}
 

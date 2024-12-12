@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"fmt"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/kmtym1998/gh-prowl/cmd"
@@ -15,6 +16,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			color.Red(fmt.Sprint(r))
+			os.Exit(1)
 		}
 	}()
 
