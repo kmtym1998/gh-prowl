@@ -101,6 +101,10 @@ func resolveRef(ctx context.Context, o *rootOption) (string, error) {
 		return "", fmt.Errorf("failed to list pull requests: %w", err)
 	}
 
+	if prList.Total == 0 {
+		return "", errors.New("no PRs found. specify --ref or use --current-branch")
+	}
+
 	selectedPR, err := selectPR(o, prList)
 	if err != nil {
 		return "", err
@@ -126,7 +130,6 @@ func selectPR(o *rootOption, prList *entity.SimplePRList) (*entity.SimplePR, err
 	}
 
 	term := term.FromEnv()
-	fmt.Printf("Total PRs: %d\n", prList.Total)
 	in, ok := term.In().(*os.File)
 	if !ok {
 		return nil, errors.New("failed to initialize prompter")
