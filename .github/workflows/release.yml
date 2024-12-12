@@ -12,9 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential gcc g++
       - uses: cli/gh-extension-precompile@v2
         with:
           go_version: "1.21"
-        # NOTE: https://github.com/ebitengine/oto/issues/118#issuecomment-669878356
         env:
+          # NOTE: https://github.com/ebitengine/oto/issues/118#issuecomment-669878356
           CGO_ENABLED: 1
+          CC: gcc
+          CXX: g++
