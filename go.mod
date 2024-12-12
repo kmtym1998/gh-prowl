@@ -7,7 +7,6 @@ require (
 	github.com/cli/cli/v2 v2.63.2
 	github.com/cli/go-gh/v2 v2.11.1
 	github.com/fatih/color v1.18.0
-	github.com/gopxl/beep/v2 v2.1.0
 	github.com/samber/lo v1.47.0
 	github.com/spf13/cobra v1.8.1
 )
@@ -20,10 +19,7 @@ require (
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cli/shurcooL-graphql v0.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/ebitengine/oto/v3 v3.2.0 // indirect
-	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/henvic/httpretty v0.1.4 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
@@ -35,7 +31,6 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/repository"
-
 	"github.com/kmtym1998/gh-prowl/api"
 	"github.com/kmtym1998/gh-prowl/entity"
 	"github.com/kmtym1998/gh-prowl/notify"
@@ -23,10 +22,10 @@ type ExecutionContext struct {
 }
 
 func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
-	soundNotifier, err := notify.NewMP3Notifier(soundFile)
-	if err != nil {
-		return nil, err
-	}
+	// soundNotifier, err := notify.NewMP3Notifier(soundFile)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	client, err := api.NewAPIClient()
 	if err != nil {
@@ -49,6 +48,6 @@ func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
 		CurrentBranch:   strings.TrimSpace(string(branchName)),
 		PollingInterval: 5 * time.Second,
 		ApiClient:       client,
-		SoundNotifier:   soundNotifier,
+		SoundNotifier:   notify.NewNoopNotifier(),
 	}, nil
 }
