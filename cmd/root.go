@@ -104,7 +104,7 @@ func resolveRef(ctx context.Context, o *rootOption) (string, error) {
 	}
 
 	if prList.Total == 0 {
-		return "", errors.New("no PRs found. specify --ref or use --current-branch")
+		return "", errors.New("no PRs found. use --ref option to monitor a specific ref")
 	}
 
 	selectedPR, err := selectPR(o, prList)
