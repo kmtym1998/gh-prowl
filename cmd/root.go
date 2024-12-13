@@ -60,7 +60,7 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 
 	f := rootCmd.Flags()
 	f.BoolP("current-branch", "c", false, "monitor the latest check status of the current branch's PR")
-	f.StringP("ref", "r", "", "monitor the latest check status of the specified branch")
+	f.StringP("ref", "r", "", "monitor the latest check status of the specified ref")
 	f.BoolP("silent", "s", false, "do not play a sound when all checks are completed")
 
 	return rootCmd
