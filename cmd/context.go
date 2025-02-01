@@ -12,6 +12,7 @@ import (
 )
 
 type ExecutionContext struct {
+	Version         string
 	RepoOwner       string
 	RepoName        string
 	CurrentBranch   string
@@ -36,6 +37,7 @@ func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
 	}
 
 	return &ExecutionContext{
+		Version:         "v1.1.0",
 		RepoOwner:       repo.Owner,
 		RepoName:        repo.Name,
 		CurrentBranch:   strings.TrimSpace(string(branchName)),
