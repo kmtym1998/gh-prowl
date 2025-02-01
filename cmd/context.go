@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/repository"
-	"github.com/kmtym1998/gh-prowl/api"
 	"github.com/kmtym1998/gh-prowl/entity"
 	"github.com/kmtym1998/gh-prowl/notify"
 )
@@ -17,17 +16,11 @@ type ExecutionContext struct {
 	RepoName        string
 	CurrentBranch   string
 	PollingInterval time.Duration
-	ApiClient       entity.GitHubAPIClient
 	SoundNotifier   entity.Notifier
 }
 
 func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
 	soundNotifier, err := notify.NewNotifier(soundFile)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := api.NewAPIClient()
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +40,6 @@ func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
 		RepoName:        repo.Name,
 		CurrentBranch:   strings.TrimSpace(string(branchName)),
 		PollingInterval: 5 * time.Second,
-		ApiClient:       client,
 		SoundNotifier:   soundNotifier,
 	}, nil
 }

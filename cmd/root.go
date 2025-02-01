@@ -19,6 +19,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
+	"github.com/kmtym1998/gh-prowl/api"
 	"github.com/kmtym1998/gh-prowl/entity"
 	"github.com/kmtym1998/gh-prowl/notify"
 )
@@ -48,8 +49,21 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 				ec.SoundNotifier = notify.NewNoopNotifier()
 			}
 
+			hostFromEnv := os.Getenv("GH_PROWL_GITHUB_HOST")
+			hostFromFlag, _ := cmd.Flags().GetString("github-hostname")
+			tokenFromEnv := os.Getenv("GH_PROWL_GITHUB_TOKEN")
+			tokenFromFlag, _ := cmd.Flags().GetString("github-token")
+			apiClient, err := api.NewAPIClient(api.APIClientOption{
+				GitHubHost:      lo.Ternary(hostFromFlag != "", hostFromFlag, hostFromEnv),
+				GitHubAuthToken: lo.Ternary(tokenFromFlag != "", tokenFromFlag, tokenFromEnv),
+			})
+			if err != nil {
+				panic(fmt.Errorf("failed to initialize API client: %w", err))
+			}
+
 			if err := rootRunE(&rootOption{
 				ec:        ec,
+				apiClient: apiClient,
 				current:   current,
 				targetRef: targetRef,
 			}); err != nil {
@@ -62,12 +76,15 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 	f.BoolP("current-branch", "c", false, "monitor the latest check status of the current branch's PR")
 	f.StringP("ref", "r", "", "monitor the latest check status of the specified ref")
 	f.BoolP("silent", "s", false, "do not play a sound when all checks are completed")
+	f.StringP("github-hostname", "n", "", "hostname of GitHub")
+	f.StringP("github-token", "t", "", "GitHub token that overrides the default token")
 
 	return rootCmd
 }
 
 type rootOption struct {
 	ec        *ExecutionContext
+	apiClient entity.GitHubAPIClient
 	current   bool
 	targetRef string
 }
@@ -98,7 +115,7 @@ func resolveRef(ctx context.Context, o *rootOption) (string, error) {
 		return o.targetRef, nil
 	}
 
-	prList, err := o.ec.ApiClient.ListPullRequests(ctx, o.ec.RepoOwner, o.ec.RepoName, 10)
+	prList, err := o.apiClient.ListPullRequests(ctx, o.ec.RepoOwner, o.ec.RepoName, 10)
 	if err != nil {
 		return "", fmt.Errorf("failed to list pull requests: %w", err)
 	}
@@ -115,7 +132,7 @@ func resolveRef(ctx context.Context, o *rootOption) (string, error) {
 	fmt.Printf("🦉 Selected PR: %s\n", selectedPR.Title)
 	fmt.Printf("🦉 View this PR on GitHub: %s\n", selectedPR.URL)
 
-	sha, err := o.ec.ApiClient.GetPRLatestCommitSHA(ctx, o.ec.RepoOwner, o.ec.RepoName, selectedPR.Number)
+	sha, err := o.apiClient.GetPRLatestCommitSHA(ctx, o.ec.RepoOwner, o.ec.RepoName, selectedPR.Number)
 	if err != nil {
 		return "", fmt.Errorf("failed to get latest commit SHA: %w", err)
 	}
@@ -168,7 +185,7 @@ func monitorCheckRuns(ctx context.Context, o *rootOption, ref string, indicator 
 			return ctx.Err()
 		}
 
-		checkRunList, err := o.ec.ApiClient.ListCheckRuns(ctx, o.ec.RepoOwner, o.ec.RepoName, ref)
+		checkRunList, err := o.apiClient.ListCheckRuns(ctx, o.ec.RepoOwner, o.ec.RepoName, ref)
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 				return err

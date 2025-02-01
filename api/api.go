@@ -9,13 +9,22 @@ type APIClient struct {
 	rest *api.RESTClient
 }
 
-func NewAPIClient() (*APIClient, error) {
-	gql, err := api.DefaultGraphQLClient()
+type APIClientOption struct {
+	GitHubHost      string
+	GitHubAuthToken string
+}
+
+func NewAPIClient(o APIClientOption) (*APIClient, error) {
+	clientOptions := api.ClientOptions{
+		Host:      o.GitHubHost,
+		AuthToken: o.GitHubAuthToken,
+	}
+	gql, err := api.NewGraphQLClient(clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	rest, err := api.DefaultRESTClient()
+	rest, err := api.NewRESTClient(clientOptions)
 	if err != nil {
 		return nil, err
 	}
