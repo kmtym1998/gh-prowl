@@ -7,7 +7,7 @@ import (
 	"github.com/kmtym1998/gh-prowl/entity"
 )
 
-// NewNotifier creates entity.Notifier depending on the
+// NewNotifier creates entity.Notifier depending on the OS.
 func NewNotifier(source io.ReadCloser) (entity.Notifier, error) {
 	goos := runtime.GOOS
 	switch goos {
