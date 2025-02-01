@@ -235,7 +235,9 @@ func printCheckRunResults(checkRuns []*entity.SimpleCheckRun) {
 		printer.AddField(result.Conclusion, tableprinter.WithColor(colorForConclusion(result.Conclusion)))
 		printer.EndRow()
 	}
-	printer.Render()
+	if err := printer.Render(); err != nil {
+		color.Red("failed to render table: %v\n", err)
+	}
 }
 
 func colorForConclusion(conclusion string) func(string) string {
