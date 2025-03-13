@@ -32,7 +32,7 @@ func NewExecutionContext(soundFile io.ReadCloser) (*ExecutionContext, error) {
 	}
 
 	return &ExecutionContext{
-		Version:         "v1.1.0",
+		Version:         "v1.1.1",
 		CurrentBranch:   strings.TrimSpace(string(branchName)),
 		PollingInterval: 5 * time.Second,
 		SoundNotifier:   soundNotifier,
