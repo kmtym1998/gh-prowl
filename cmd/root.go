@@ -30,6 +30,9 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 		Version: ec.Version, // FIXME: version should be set by ldflags
 		Short:   "Track the progress of repository checks and notify upon completion",
 		Long:    `This command allows you to monitor the status of GitHub Actions checks for a pull request (PR) or a specific branch. If used with the "--current-branch" flag, it monitors the PR associated with the current branch. Otherwise, you can select a PR or specify a branch manually.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return ec.SetRepository(cmd.Flags())
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			current, err := cmd.Flags().GetBool("current-branch")
 			if err != nil {
@@ -50,12 +53,10 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 				ec.SoundNotifier = notify.NewNoopNotifier()
 			}
 
-			hostFromEnv := os.Getenv("GH_PROWL_GITHUB_HOST")
-			hostFromFlag, _ := cmd.Flags().GetString("github-hostname")
 			tokenFromEnv := os.Getenv("GH_PROWL_GITHUB_TOKEN")
 			tokenFromFlag, _ := cmd.Flags().GetString("github-token")
 			apiClient, err := api.NewAPIClient(api.APIClientOption{
-				GitHubHost:      lo.Ternary(hostFromFlag != "", hostFromFlag, hostFromEnv),
+				GitHubHost:      ec.Repo.Host,
 				GitHubAuthToken: lo.Ternary(tokenFromFlag != "", tokenFromFlag, tokenFromEnv),
 			})
 			if err != nil {
@@ -77,8 +78,8 @@ func NewRootCmd(ec *ExecutionContext) *cobra.Command {
 	f.BoolP("current-branch", "c", false, "monitor the latest check status of the current branch's PR")
 	f.StringP("ref", "r", "", "monitor the latest check status of the specified ref")
 	f.BoolP("silent", "s", false, "do not play a sound when all checks are completed")
-	f.StringP("github-hostname", "n", "", "hostname of GitHub")
 	f.StringP("github-token", "t", "", "GitHub token that overrides the default token")
+	f.StringP("repo", "R", "", "select another repository using the [HOST/]OWNER/REPO format if you want to monitor a repository other than the current one or you want to specify HOST explicitly")
 
 	return rootCmd
 }
@@ -116,7 +117,7 @@ func resolveRef(ctx context.Context, o *rootOption) (string, error) {
 		return o.targetRef, nil
 	}
 
-	prList, err := o.apiClient.ListPullRequests(ctx, o.ec.RepoOwner, o.ec.RepoName, 10)
+	prList, err := o.apiClient.ListPullRequests(ctx, o.ec.Repo.Owner, o.ec.Repo.Name, 10)
 	if err != nil {
 		return "", fmt.Errorf("failed to list pull requests: %w", err)
 	}
@@ -133,7 +134,7 @@ func resolveRef(ctx context.Context, o *rootOption) (string, error) {
 	fmt.Printf("🦉 Selected PR: %s\n", selectedPR.Title)
 	fmt.Printf("🦉 View this PR on GitHub: %s\n", selectedPR.URL)
 
-	sha, err := o.apiClient.GetPRLatestCommitSHA(ctx, o.ec.RepoOwner, o.ec.RepoName, selectedPR.Number)
+	sha, err := o.apiClient.GetPRLatestCommitSHA(ctx, o.ec.Repo.Owner, o.ec.Repo.Name, selectedPR.Number)
 	if err != nil {
 		return "", fmt.Errorf("failed to get latest commit SHA: %w", err)
 	}
@@ -186,7 +187,7 @@ func monitorCheckRuns(ctx context.Context, o *rootOption, ref string, indicator 
 			return ctx.Err()
 		}
 
-		checkRunList, err := o.apiClient.ListCheckRuns(ctx, o.ec.RepoOwner, o.ec.RepoName, ref)
+		checkRunList, err := o.apiClient.ListCheckRuns(ctx, o.ec.Repo.Owner, o.ec.Repo.Name, ref)
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 				return err
